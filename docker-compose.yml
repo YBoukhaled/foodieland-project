@@ -1,0 +1,54 @@
+services:
+
+  db:
+    image: mysql:8.0
+    container_name: foodieland_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: foodieland
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - foodieland_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: foodieland_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - vendor_data:/var/www/html/vendor  
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - foodieland_network
+
+  frontend:
+    build: ./frontend
+    container_name: foodieland_vue
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - foodieland_network
+
+volumes:
+  db_data:
+  vendor_data:
+networks:
+  foodieland_network:
+    driver: bridge
